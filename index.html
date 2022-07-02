@@ -1,0 +1,246 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Canvas Vectors</title>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        body {
+            height: 100vh;
+            background-color: black;
+            text-align: center;
+        }
+
+        #canvas {
+            background-color: deepskyblue;
+        }
+
+        .desc {
+            max-width: 1024px;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: #ddffff;
+            text-align: left;
+            box-sizing: border-box;
+            padding: 20px;
+            font-size: 12px;
+            font-family: "Arial";
+        }
+
+        .desc p {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .desc input[type=text] {
+            width: 100px;
+        }
+
+        .desc .inputs {
+            display: flex;
+            gap: 40px;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div class="desc">
+    <p>To draw a real world vector, draw the line along the x-axis and rotate by the negative angle.</p>
+    <p>Remember that the y-axis is flipped so that positive y goes down.</p>
+    <p>Note: Arcs are drawn clockwise starting from the positive x-axis. Canvas rotation, on the other hand, has no starting point; it simply rotates by an angle around a specified point.</p>
+    <br>
+    <div class="inputs">
+        <div>
+            x: <input type="text" id="inputX" value="37" onkeyup="updateCoords(true);">, &nbsp;&nbsp; y: <input type="text" id="inputY" value="137" onkeyup="updateCoords(true);"> <input type="button" value="Update" onclick="updateCoords(true);">
+        </div>
+        <div>Or</div>
+        <div>
+            &theta;&deg;: <input type="text" id="inputT" onkeyup="updateCoords();"> &nbsp;&nbsp; Magnitude: <input type="text" id="inputM" onkeyup="updateCoords();"> <input type="button" value="Update" onclick="updateCoords();">
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">//<![CDATA[
+let canvas = document.querySelector("#canvas");
+let ctx = canvas.getContext("2d");
+canvas.width = Math.min(window.innerWidth, 1024);
+canvas.height = (canvas.width * .75);
+
+let _canvasColor = "forestgreen";
+
+let _vector = {
+    getMagnitude: function(vector) {
+        return Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2));
+    },
+
+    addV: function (v1, v2) {
+        return {
+            x: (v1.x + v2.x),
+            y: (v1.y + v2.y)
+        };
+    },
+
+    divide: function (vector, denominator) {
+        return {
+            x: (vector.x / denominator),
+            y: (vector.y / denominator)
+        };
+    },
+
+    multiply: function (vector, multiplier) {
+        return {
+            x: (vector.x * multiplier),
+            y: (vector.y * multiplier)
+        };
+    },
+
+    normalize: function (vector) {
+        return this.divide(vector, this.getMagnitude(vector));
+    },
+
+    getAngle: function (vector) {
+        let tan = Math.atan2(vector.y, vector.x);
+        return (tan < 0 ? (2 * Math.PI + tan) : tan);
+    },
+
+    fromAngle: function (angle, magnitude) {
+        return {
+            x: (Math.cos(angle) * magnitude),
+            y: (Math.sin(angle) * magnitude),
+        }
+    },
+
+    toString: function (vector, rnd) {
+        return "(" + vector.x.toFixed(rnd) + ", " + vector.y.toFixed(rnd) + ")";
+    },
+
+    toDegrees: function (radians) {
+        return (radians / (Math.PI / 180));
+    },
+
+    toRadians: function (degrees) {
+        return (degrees * (Math.PI / 180));
+    },
+};
+
+function run(vector) {
+    clearCanvas();
+
+    drawCartesianPlane();
+
+    drawVector(vector);
+    drawVectorDetails(vector);
+}
+updateCoords();
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawCartesianPlane() {
+    // x
+    ctx.beginPath();
+    ctx.moveTo(0, (canvas.height / 2) + .5);
+    ctx.lineTo(canvas.width, (canvas.height / 2) + .5);
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+
+    // Y
+    ctx.beginPath();
+    ctx.moveTo((canvas.width / 2) + .5, 0);
+    ctx.lineTo((canvas.width / 2) + .5, canvas.height);
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+}
+
+function drawVector(vector) {
+    let mag = Math.min(_vector.getMagnitude(vector), canvas.height / 2);
+    let ang = _vector.getAngle(vector);
+
+    ctx.save();
+    {
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-ang);
+
+        // Canvas arc
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, ang);
+        ctx.strokeStyle = _canvasColor;
+        ctx.stroke();
+
+        // Canvas vector
+        ctx.beginPath();
+        ctx.rect(0, 0, mag, 1);
+        ctx.fillStyle = _canvasColor;
+        ctx.fill();
+
+        // Vector arrow
+        ctx.beginPath();
+        ctx.moveTo(mag, 0);
+        ctx.lineTo(mag - 5, -5);
+        ctx.lineTo(mag - 5, 5);
+        ctx.lineTo(mag, 0);
+        ctx.fillStyle = _canvasColor;
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawVectorDetails(vector) {
+    ctx.save();
+
+    let theta = _vector.getAngle(vector);
+    let y = 1;
+
+    ctx.beginPath();
+    ctx.font = "15px Arial";
+
+    ctx.fillStyle = "white";
+    ctx.fillText("Vector: " + _vector.toString(vector, 2), 10, y++ * 20);
+    ctx.fillText("Unit: " + _vector.toString(_vector.normalize(vector), 2), 10, y++ * 20);
+    ctx.fillText("Magnitude: " + _vector.getMagnitude(vector).toFixed(2), 10, y++ * 20);
+    ctx.fillText("Theta: " + (theta / (Math.PI / 180)).toFixed(2) + "° (" + (theta / Math.PI).toFixed(2) + " π)", 10, y++ * 20);
+
+    ctx.restore();
+}
+
+function updateCoords(updateCoords) {
+    let ix = document.querySelector("#inputX");
+    let iy = document.querySelector("#inputY");
+    let it = document.querySelector("#inputT");
+    let im = document.querySelector("#inputM");
+
+    let x = parseInt(ix.value, 10);
+    let y = parseInt(iy.value, 10);
+    let t = parseInt(it.value, 10);
+    let m = parseInt(im.value, 10);
+
+    let vector = { x: x, y: y };
+
+    if (!updateCoords && !isNaN(t)) {
+        vector = _vector.fromAngle(_vector.toRadians(t), isNaN(m) ? 150 : m);
+
+        ix.value = "";
+        iy.value = "";
+    }
+    else if (updateCoords && !isNaN(x) && !isNaN(y)) {
+        it.value = "";
+        im.value = "";
+    }
+
+    run(vector);
+}
+
+//]]></script>
+</body>
+</html>
